@@ -1,0 +1,52 @@
+version: "3"
+services:
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8000:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+
+  spark-master:
+    image: wiscer/spark-base
+    command: >
+      /home/spark/spark-2.2.0-bin-hadoop2.7/bin/spark-class
+      org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: 0.0.0.0
+    ports:
+      - "4040:4040"
+      - "6066:6066"
+      - "7077:7077"
+      - "8080:8080"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+
+  spark-slave:
+    image: wiscer/spark-base
+    command: >
+      /home/spark/spark-2.2.0-bin-hadoop2.7/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 4G
+      SPARK_WORKER_PORT: 8881
+      SPARK_WORKER_WEBUI_PORT: 8081
+    ports:
+      - "8081:8081"
+    deploy:
+      replicas: 2
+    networks:
+      - webnet
+
+networks:
+  webnet:
